@@ -6,7 +6,7 @@ website:
   navbar:
     left:
       - text: "Data Analytics"
-        href: "AGO_Prelim.html"
+        href: ""
       - text: "Written report"
         href: ""
     right: 
