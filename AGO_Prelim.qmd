@@ -1,0 +1,182 @@
+---
+title: "AGO_Prelim"
+date: "6 March 2023"
+date-modified: "`r Sys.Date()`"
+number-sections: true
+format: html
+execute: 
+  echo: true
+  eval: true
+  warning: false
+editor: visual
+---
+
+# Setting Up
+
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+```
+
+```{r}
+procurement_data <- read_csv("Data_file.csv")
+```
+
+# Exploratory Data Analysis (EDA)
+
+## Understanding the Dataset
+
+-   Checking for Duplicate entries
+
+```{r}
+any(duplicated(procurement_data$`Procurement Code`))
+```
+
+Procurement Code does not have duplicated entries and has an assigned unique identifier to the transaction made.
+
+::: panel-tabset
+# Agency
+
+This showcases the number of Government agencies and Statutory Boards within this dataset.
+
+```{r}
+unique(procurement_data$Agency)
+```
+
+There are a total of 15 agencies under this dataset.
+
+# Procurement Description
+
+This showcases how procurement purposes are being categorized.
+
+```{r}
+unique(procurement_data$`Procurement Description`)
+```
+
+There are a total of 20 categories of reasons for why procurement was made.
+
+# Supplier
+
+This showcases the catalogue of suppliers agencies may refer to for procurement
+
+```{r}
+unique(procurement_data$Supplier)
+```
+
+A total of 98 suppliers were paid for their services.
+:::
+
+## Setting the correct variable types
+
+The code below shows the variable types for each column.
+
+```{r}
+glimpse(procurement_data)
+```
+
+Over here, we see that Date of Award and Awarded Amount are in character type and should be changed to date and integer respectively.
+
+```{r}
+clean_data <- procurement_data %>%
+    mutate(`Date of Award (2017-2022)` = dmy(`Date of Award (2017-2022)`)) %>%
+    mutate(`Awarded Amount` = as.numeric(gsub(",","", gsub("\\$","", `Awarded Amount`)))) %>%
+    rename(Date = `Date of Award (2017-2022)`)
+
+glimpse(clean_data)
+```
+
+For easier referencing, "Date of Award (2017-2022)" is changed to "Date".
+As seen above, the respective columns have to changed accordingly.
+
+# Data Cleaning
+
+The first task is to ensure that the data is accurate and reliable.
+
+Procurement procedures depend on the estimated value of the goods or services provided.
+
+1.  Small value purchases (SVP)
+
+    For goods or services with an estimated value of up to \$10,000.
+
+2.  Invitation to Quote (ITQ)
+
+    For goods or services with an estimated value of up to \$100,000.
+
+3.  Invitation to Tender (ITT)
+
+    For goods or services with an estimated value of above \$100,000.
+
+Given the limits, we should ensure that the Procurement Type is accurate to the value attached to the procurement.
+
+The code below shows that there are procurement done at below the value of \$10,000 but are not labelled as SVP.
+
+```{r}
+any(clean_data$`Awarded Amount` < 10000 & clean_data$`Procurement Type` == "SVP")
+any(clean_data$`Awarded Amount` > 100000 & clean_data$`Procurement Type` == "ITT")
+```
+
+```{r}
+for (i in 1:7000){
+  if (clean_data$`Awarded Amount`[i] < 10000){
+    if (clean_data$`Procurement Type`[i] != "SVP"){
+      clean_data$`Procurement Type`[i] = "SVP"
+    }
+    if (clean_data$`Awarded Amount`[i] > 100000){
+      if (clean_data$`Procurement Type`[i] != "ITT"){
+        clean_data$`Procurement Type`[i] =="ITT"
+      } 
+    else {
+      if (clean_data$`Procurement Type`[i] != "ITQ"){
+        clean_data$`Procurement Type`[i] =="ITQ"
+      }
+    }    
+    }
+    
+  }
+}
+```
+
+```{r}
+any(clean_data$`Awarded Amount` < 10000 & clean_data$`Procurement Type` == "SVP")
+any(clean_data$`Awarded Amount` > 10000 & clean_data$`Awarded Amount` < 100000 & clean_data$`Procurement Type` == "ITQ")
+any(clean_data$`Awarded Amount` > 100000 & clean_data$`Procurement Type` == "ITT")
+```
+
+Through observation, we notice that the procurement code has the first three letters that indicate the procurement type.
+Ensure that they are correctly identified and can be flagged accordingly to the agency handling such datasets.
+
+```{r}
+mismatched_indices <- which(str_sub(clean_data$`Procurement Code`, 1, 3) != clean_data$`Procurement Type`)
+mismatched_indices
+```
+
+As we can see, there were 10 mismatched indices.
+
+```{r}
+clean_data[mismatched_indices, c(1,2,3,8)]
+```
+
+From the table above, all 10 were mislabeled as ITQ.
+We can flag this to the team handling this dataset to keep watch.
+This could be easily fixed through automated processes by automatically assigning the correct type and code based on amount declared or invoiced in.
+
+Next, amend the dataframe accordingly to reflect the intended change.
+
+```{r}
+final_data <- clean_data %>%
+  mutate(`Procurement Code` = ifelse(
+    str_sub(`Procurement Code`, 1, 3) != `Procurement Type`,
+    paste0(`Procurement Type`, str_sub(`Procurement Code`, 4)),
+    `Procurement Code`
+  ))
+final_data[mismatched_indices,]
+```
+
+```{r, eval = FALSE}
+readr::write_csv(final_data, "AGO_Cleaned_Data.csv")
+```
+
+## Control Framework

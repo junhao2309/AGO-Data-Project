@@ -1,9 +1,17 @@
 ---
-title: "About"
+title: "About our group"
 ---
 
-About this site
+# Self-Introduction
 
-```{r}
-1 + 1
-```
+## Member 1: Teo Jun Hao
+
+...
+
+## Member 2: Valerie
+
+...
+
+## Member 3: Emma
+
+...

@@ -4,13 +4,62 @@
     "href": "index.html",
     "title": "AGO-Data-Project",
     "section": "",
-    "text": "This is a Quarto website.\nTo learn more about Quarto websites visit https://quarto.org/docs/websites.\n\n1 + 1\n\n[1] 2"
+    "text": "On this website, you will find\n\nData Analytics Report\nThis showcases how the group wrangle, clean and analyze the given dataset.\nWritten Report\nThis report summarises our findings into a more formal report."
   },
   {
     "objectID": "about.html",
     "href": "about.html",
-    "title": "About",
+    "title": "About our group",
     "section": "",
-    "text": "About this site\n\n1 + 1\n\n[1] 2"
+    "text": "…\n\n\n\n…\n\n\n\n…"
+  },
+  {
+    "objectID": "about.html#member-1-teo-jun-hao",
+    "href": "about.html#member-1-teo-jun-hao",
+    "title": "About our group",
+    "section": "",
+    "text": "…"
+  },
+  {
+    "objectID": "about.html#member-2-valerie",
+    "href": "about.html#member-2-valerie",
+    "title": "About our group",
+    "section": "",
+    "text": "…"
+  },
+  {
+    "objectID": "about.html#member-3-emma",
+    "href": "about.html#member-3-emma",
+    "title": "About our group",
+    "section": "",
+    "text": "…"
+  },
+  {
+    "objectID": "AGO_Prelim.html",
+    "href": "AGO_Prelim.html",
+    "title": "AGO_Prelim",
+    "section": "",
+    "text": "library(dplyr)\nlibrary(readr)\nlibrary(ggplot2)\nlibrary(lubridate)\nlibrary(stringr)\n\n\nprocurement_data &lt;- read_csv(\"Data_file.csv\")"
+  },
+  {
+    "objectID": "AGO_Prelim.html#understanding-the-dataset",
+    "href": "AGO_Prelim.html#understanding-the-dataset",
+    "title": "AGO_Prelim",
+    "section": "2.1 Understanding the Dataset",
+    "text": "2.1 Understanding the Dataset\n\nChecking for Duplicate entries\n\n\nany(duplicated(procurement_data$`Procurement Code`))\n\n[1] FALSE\n\n\nProcurement Code does not have duplicated entries and has an assigned unique identifier to the transaction made.\n\nAgencyProcurement DescriptionSupplier\n\n\nThis showcases the number of Government agencies and Statutory Boards within this dataset.\n\nunique(procurement_data$Agency)\n\n [1] \"National Institute of Scientific Advancement\"            \n [2] \"Office of International Relations and Diplomatic Affairs\"\n [3] \"Ministry of Strategic Economic Planning\"                 \n [4] \"Agency for Cultural Preservation and Heritage\"           \n [5] \"Department of Public Health and Disease Control\"         \n [6] \"Institute for Social Justice and Equality\"               \n [7] \"Department of Advanced Technological Research\"           \n [8] \"Office of Public Safety and Emergency Management\"        \n [9] \"National Commission for Space Exploration\"               \n[10] \"National Cybersecurity Task Force\"                       \n[11] \"Bureau of Urban Development and Infrastructure\"          \n[12] \"Department of Energy Conservation and Sustainability\"    \n[13] \"Bureau of National Security and Intelligence\"            \n[14] \"Commission for Ethical Governance\"                       \n[15] \"Federal Agency for Environmental Protection\"             \n\n\nThere are a total of 15 agencies under this dataset.\n\n\nThis showcases how procurement purposes are being categorized.\n\nunique(procurement_data$`Procurement Description`)\n\n [1] \"Parking management and traffic control solutions.\"             \n [2] \"Space planning and utilization optimization strategies.\"       \n [3] \"Health and safety compliance management and training.\"         \n [4] \"Waste management and recycling program implementation.\"        \n [5] \"Emergency response and disaster recovery planning.\"            \n [6] \"Pest control services for a pest-free environment.\"            \n [7] \"Energy-efficient lighting installation and maintenance.\"       \n [8] \"Indoor air quality monitoring and improvement measures.\"       \n [9] \"Building maintenance and repairs.\"                             \n[10] \"Building automation and smart technology integration.\"         \n[11] \"Cleaning supplies and consumables procurement and management.\" \n[12] \"Furniture and equipment maintenance and inventory tracking.\"   \n[13] \"Fire safety system installation and maintenance.\"              \n[14] \"HVAC system maintenance and climate control optimization.\"     \n[15] \"Tenant communication and customer service assistance.\"         \n[16] \"Comprehensive janitorial services and cleanliness maintenance.\"\n[17] \"Expert landscaping and groundskeeping solutions.\"              \n[18] \"24/7 security and access control management.\"                  \n[19] \"Renovation and remodeling project management.\"                 \n[20] \"Energy-efficient systems and consumption monitoring.\"          \n\n\nThere are a total of 20 categories of reasons for why procurement was made.\n\n\nThis showcases the catalogue of suppliers agencies may refer to for procurement\n\nunique(procurement_data$Supplier)\n\n [1] \"SafeHaven Maintenance\"            \"TrueView Management\"             \n [3] \"CleanHarbor Facility Care\"        \"EverPrime Property Management\"   \n [5] \"UrbanTech Management\"             \"GrandReach Facility Care\"        \n [7] \"GoldenHarbor Management\"          \"TrueWave Facilities Management\"  \n [9] \"CleanSweep Property Management\"   \"SkyHigh Property Management\"     \n[11] \"GrandView Facilities Group\"       \"EliteTech Property Support\"      \n[13] \"SwiftGuard Management\"            \"HorizonPro Facility Management\"  \n[15] \"InfiniteSpace Building Solutions\" \"AlphaCrest Property Support\"     \n[17] \"Xtreme Maintenance\"               \"StarStone Facility Services\"     \n[19] \"UrbanGuard Facilities\"            \"InfiniteGuard Building Care\"     \n[21] \"UrbanEagle Maintenance\"           \"SilverTech Facilities Masters\"   \n[23] \"ApexGuard Facility Services\"      \"EverPro Property Support\"        \n[25] \"TruePro Building Experts\"         \"SafeReach Property Solutions\"    \n[27] \"BlueBreeze Facility Solutions\"    \"GoldenGate Facility Masters\"     \n[29] \"Reliable Facility Services\"       \"GreenPrime Facilities Group\"     \n[31] \"SkyHarbor Facility Experts\"       \"BlueCrest Facility Support\"      \n[33] \"AlphaPro Facility Solutions\"      \"HighWave Building Solutions\"     \n[35] \"TrustEdge Building Maintenance\"   \"BlueSky Property Care\"           \n[37] \"SkyStone Property Solutions\"      \"GreenLine Building Experts\"      \n[39] \"UrbanEdge Maintenance\"            \"HorizonHarbor Property Services\" \n[41] \"SafeEdge Property Care\"           \"AlphaWave Property Solutions\"    \n[43] \"InfiniteTech Building Solutions\"  \"GrandPro Facilities Support\"     \n[45] \"GoldenReach Property Management\"  \"SafeHarbor Facilities Group\"     \n[47] \"SecureSpace Management\"           \"FreshEdge Facility Support\"      \n[49] \"BlueSail Property Experts\"        \"HorizonView Property Management\" \n[51] \"TrustPro Building Maintenance\"    \"StarHarbor Facilities Group\"     \n[53] \"SilverReach Facility Services\"    \"GreenWave Facilities Management\" \n[55] \"AlphaStone Property Support\"      \"AlphaTech Facilities Management\" \n[57] \"MaxPro Building Services\"         \"TrueNorth Facility Solutions\"    \n[59] \"SecurePrime Management\"           \"FreshWave Property Support\"      \n[61] \"SwiftReach Building Maintenance\"  \"EverReach Property Care\"         \n[63] \"SilverStone Management\"           \"EliteEdge Facilities Group\"      \n[65] \"GreenEdge Facility Masters\"       \"InfiniteCare Property Services\"  \n[67] \"GoldenTech Maintenance\"           \"EliteCare Facility Support\"      \n[69] \"StarCrest Facility Services\"      \"SwiftSail Building Solutions\"    \n[71] \"FreshTech Management\"             \"SecureTech Building Solutions\"   \n[73] \"TrustGuard Facilities\"            \"FreshStart Building Solutions\"   \n[75] \"InfinitePro Facility Care\"        \"UnitedPro Property Services\"     \n[77] \"SilverLine Facility Experts\"      \"CleanStone Property Experts\"     \n[79] \"CleanReach Facility Experts\"      \"VisionQuest Facility Care\"       \n[81] \"GreenCrest Facilities Group\"      \"HighPoint Property Care\"         \n[83] \"SecureReach Property Care\"        \"UrbanReach Facility Support\"     \n[85] \"GrandTech Building Solutions\"     \"EverGreen Property Support\"      \n[87] \"BlueReach Property Solutions\"     \"TrustMax Facilities Masters\"     \n[89] \"EliteReach Building Solutions\"    \"SwiftCrest Property Management\"  \n[91] \"HighTech Facilities Group\"        \"GoldenStar Property Care\"        \n[93] \"HorizonStone Facility Services\"   \"SkyQuest Facility Care\"          \n[95] \"StarTech Facility Solutions\"      \"GrandEdge Property Solutions\"    \n[97] \"SafeTech Maintenance\"             \"SwiftTech Facility Solutions\"    \n\n\nA total of 98 suppliers were paid for their services."
+  },
+  {
+    "objectID": "AGO_Prelim.html#setting-the-correct-variable-types",
+    "href": "AGO_Prelim.html#setting-the-correct-variable-types",
+    "title": "AGO_Prelim",
+    "section": "2.2 Setting the correct variable types",
+    "text": "2.2 Setting the correct variable types\nThe code below shows the variable types for each column.\n\nglimpse(procurement_data)\n\nRows: 7,000\nColumns: 8\n$ `S/N`                       &lt;dbl&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,…\n$ `Procurement Code`          &lt;chr&gt; \"ITQ20160157\", \"ITQ20170001\", \"ITQ20170002…\n$ `Procurement Type`          &lt;chr&gt; \"ITQ\", \"ITQ\", \"ITQ\", \"ITQ\", \"ITQ\", \"ITQ\", …\n$ Agency                      &lt;chr&gt; \"National Institute of Scientific Advancem…\n$ `Procurement Description`   &lt;chr&gt; \"Parking management and traffic control so…\n$ `Date of Award (2017-2022)` &lt;chr&gt; \"1/7/2016\", \"1/1/2017\", \"5/1/2017\", \"8/1/2…\n$ Supplier                    &lt;chr&gt; \"SafeHaven Maintenance\", \"TrueView Managem…\n$ `Awarded Amount`            &lt;chr&gt; \"$40,532.00\", \"$16,928.00\", \"$14,183.00\", …\n\n\nOver here, we see that Date of Award and Awarded Amount are in character type and should be changed to date and integer respectively.\n\nclean_data &lt;- procurement_data %&gt;%\n    mutate(`Date of Award (2017-2022)` = dmy(`Date of Award (2017-2022)`)) %&gt;%\n    mutate(`Awarded Amount` = as.numeric(gsub(\",\",\"\", gsub(\"\\\\$\",\"\", `Awarded Amount`)))) %&gt;%\n    rename(Date = `Date of Award (2017-2022)`)\n\nglimpse(clean_data)\n\nRows: 7,000\nColumns: 8\n$ `S/N`                     &lt;dbl&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 1…\n$ `Procurement Code`        &lt;chr&gt; \"ITQ20160157\", \"ITQ20170001\", \"ITQ20170002\",…\n$ `Procurement Type`        &lt;chr&gt; \"ITQ\", \"ITQ\", \"ITQ\", \"ITQ\", \"ITQ\", \"ITQ\", \"I…\n$ Agency                    &lt;chr&gt; \"National Institute of Scientific Advancemen…\n$ `Procurement Description` &lt;chr&gt; \"Parking management and traffic control solu…\n$ Date                      &lt;date&gt; 2016-07-01, 2017-01-01, 2017-01-05, 2017-01…\n$ Supplier                  &lt;chr&gt; \"SafeHaven Maintenance\", \"TrueView Managemen…\n$ `Awarded Amount`          &lt;dbl&gt; 40532, 16928, 14183, 19908, 42332, 65341, 34…\n\n\nFor easier referencing, “Date of Award (2017-2022)” is changed to “Date”. As seen above, the respective columns have to changed accordingly."
+  },
+  {
+    "objectID": "AGO_Prelim.html#control-framework",
+    "href": "AGO_Prelim.html#control-framework",
+    "title": "AGO_Prelim",
+    "section": "3.1 Control Framework",
+    "text": "3.1 Control Framework"
   }
 ]

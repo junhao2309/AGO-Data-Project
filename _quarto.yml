@@ -5,13 +5,20 @@ website:
   title: "AGO-Data-Project"
   navbar:
     left:
+      - text: "Data Analytics"
+        href: "AGO_Prelim.html"
+      - text: "Written report"
+        href: ""
+    right: 
       - href: index.qmd
         text: Home
-      - about.qmd
-
+      - href: about.qmd
+        text: Our Group
+      - icon: github
+        href: https://github.com/junhao2309/AGO-Data-Project
 format:
   html:
-    theme: cosmo
+    theme: journal
     css: styles.css
     toc: true
 

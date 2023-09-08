@@ -2,10 +2,12 @@
 title: "AGO-Data-Project"
 ---
 
-This is a Quarto website.
+On this website, you will find
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+-   Data Analytics Report
 
-```{r}
-1 + 1
-```
+    This showcases how the group wrangle, clean and analyze the given dataset.
+
+-   Written Report
+
+    This report summarises our findings into a more formal report.
