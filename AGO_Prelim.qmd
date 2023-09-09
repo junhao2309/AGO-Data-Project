@@ -19,6 +19,8 @@ library(readr)
 library(ggplot2)
 library(lubridate)
 library(stringr)
+library(crosstalk)
+library(plotly)
 ```
 
 ```{r}
@@ -38,7 +40,7 @@ any(duplicated(procurement_data$`Procurement Code`))
 Procurement Code does not have duplicated entries and has an assigned unique identifier to the transaction made.
 
 ::: panel-tabset
-# Agency
+### Agency
 
 This showcases the number of Government agencies and Statutory Boards within this dataset.
 
@@ -48,7 +50,7 @@ unique(procurement_data$Agency)
 
 There are a total of 15 agencies under this dataset.
 
-# Procurement Description
+### Procurement Description
 
 This showcases how procurement purposes are being categorized.
 
@@ -58,7 +60,7 @@ unique(procurement_data$`Procurement Description`)
 
 There are a total of 20 categories of reasons for why procurement was made.
 
-# Supplier
+### Supplier
 
 This showcases the catalogue of suppliers agencies may refer to for procurement
 
@@ -91,7 +93,7 @@ glimpse(clean_data)
 For easier referencing, "Date of Award (2017-2022)" is changed to "Date".
 As seen above, the respective columns have to changed accordingly.
 
-# Data Cleaning
+## Data Cleaning
 
 The first task is to ensure that the data is accurate and reliable.
 
@@ -108,6 +110,8 @@ Procurement procedures depend on the estimated value of the goods or services pr
 3.  Invitation to Tender (ITT)
 
     For goods or services with an estimated value of above \$100,000.
+
+### Checking Awarded Amount
 
 Given the limits, we should ensure that the Procurement Type is accurate to the value attached to the procurement.
 
@@ -145,6 +149,8 @@ any(clean_data$`Awarded Amount` > 10000 & clean_data$`Awarded Amount` < 100000 &
 any(clean_data$`Awarded Amount` > 100000 & clean_data$`Procurement Type` == "ITT")
 ```
 
+### Procurement Code and Type
+
 Through observation, we notice that the procurement code has the first three letters that indicate the procurement type.
 Ensure that they are correctly identified and can be flagged accordingly to the agency handling such datasets.
 
@@ -179,4 +185,92 @@ final_data[mismatched_indices,]
 readr::write_csv(final_data, "AGO_Cleaned_Data.csv")
 ```
 
-## Control Framework
+Then we can just call this cleaned data from our folder.\
+
+```{r}
+clean_data <- read_csv("AGO_Cleaned_Data.csv")
+```
+
+## Visualisation
+
+Here, we are visualising the Agency and the total sum spent per month just to have a sensing of the different agencies and size of expenditure.
+
+```{r}
+agency_grouped <- clean_data %>%
+  group_by(`Procurement Type`, Agency, Month = floor_date(Date,"month")) %>%
+  summarize(Total_Amount = sum(`Awarded Amount`), .groups = 'drop')
+```
+
+```{r}
+library(DT)
+
+datatable(agency_grouped)
+```
+
+### Plot
+
+```{r}
+library(plotly)
+library(dplyr)
+
+# Initialize an empty plot
+plot_data <- plot_ly()
+
+# Unique procurement types
+procurement_types <- unique(agency_grouped$`Procurement Type`)
+
+agencies <- unique(clean_data$Agency)
+
+# Iteratively add traces for each combination of agency and procurement type
+for (agency in agencies) {
+    for (ptype in procurement_types) {
+        plot_data <- add_trace(plot_data, 
+                               data = filter(agency_grouped, Agency == agency, `Procurement Type` == ptype),
+                               x = ~Month, 
+                               y = ~Total_Amount, 
+                               color = ~Agency,
+                               line = list(shape = "spline"),
+                               type = "scatter", mode = "lines+markers",
+                               text = ~paste("Total Amount:", Total_Amount),
+                               hoverinfo = "text+x",
+                               name = paste(agency, ptype),
+                               visible = agency == agencies[1] && ptype == procurement_types[1]  # Default visibility
+        )
+    }
+}
+
+# Set up the dropdown menu 
+dropdown <- list()
+counter <- 1
+for (agency in agencies) {
+    for (ptype in procurement_types) {
+        visibility_vals <- rep(FALSE, length(agencies) * length(procurement_types))
+        visibility_vals[counter] <- TRUE
+        dropdown[[counter]] <- list(
+            args = list("visible", visibility_vals),
+            label = paste("Agency:", agency, "| Procurement Type:", ptype),
+            method = "restyle"
+        )
+        counter <- counter + 1
+    }
+}
+
+# Add dropdown to the layout and remove the legend
+plot_data <- layout(plot_data, 
+                    title = "Sum of Amount Awarded Over Time by Agency and Procurement Type",
+                    xaxis = list(rangeslider = list(visible = TRUE)),
+                    yaxis = list(title = "Total Amount"),
+                    showlegend = FALSE,  # Hides the legend
+                    updatemenus = list(
+                        list(
+                            y = 0.95,  # Adjust the position of dropdown
+                            x = 1,
+                            yanchor = "top",
+                            xanchor = "left",
+                            buttons = dropdown
+                        )
+                    ),
+                    margin = list(l = 250, r = 50, b = 40, t = 40, pad = 4)
+                    )
+plot_data
+```
