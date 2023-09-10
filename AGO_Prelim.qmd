@@ -181,8 +181,32 @@ final_data <- clean_data %>%
 final_data[mismatched_indices,]
 ```
 
+### Out of range data elements
+
+The code below shows that there are at least two datasets outside the range of the suppose time period.
+
+```{r}
+which(any(final_data$Date < ymd("2017-01-01")))
+which(any(final_data$Date > ymd("2022-12-31")))
+```
+
+```{r}
+date_min <- min(final_data$Date)
+date_max <- max(final_data$Date)
+which(final_data$Date == date_min)
+which(final_data$Date == date_max)
+
+final_data[c(1,7000),]
+```
+
+We can remove the two entries from the dataset.
+
+```{r}
+final <- final_data[-c(1,7000),]
+```
+
 ```{r, eval = FALSE}
-readr::write_csv(final_data, "AGO_Cleaned_Data.csv")
+readr::write_csv(final, "AGO_Cleaned_Data.csv")
 ```
 
 Then we can just call this cleaned data from our folder.\
@@ -273,4 +297,56 @@ plot_data <- layout(plot_data,
                     margin = list(l = 250, r = 50, b = 40, t = 40, pad = 4)
                     )
 plot_data
+```
+
+```{r}
+library(benford.analysis)
+
+# Extract the 'Awarded Amount' column
+award_amounts <- clean_data$`Awarded Amount`
+
+# Perform Benford Analysis on the extracted data
+result <- benford(award_amounts, number.of.digits=1, sign="positive", discrete=FALSE, round=0)
+
+# Print the result
+print(result)
+
+```
+
+```{r}
+plot(result)
+```
+
+# Analysis of 5 agencies
+
+```{r}
+clean_data$Year <- as.numeric(format(clean_data$Date, "%Y"))
+```
+
+Once the dataset is set, we will create a shiny app to visualise the data.
+Due to the various procurement types and agencies, having a central visualization tool that takes in user input would facilitate the process.
+
+```{r}
+agency_list <- c("National Commission for Space Exploration", 
+                 "National Cybersecurity Task Force",
+                 "National Institute of Scientific Advancement",
+                 "Office of International Relations and Diplomatic Affairs",
+                 "Office of Public Safety and Emergency Management")
+
+NCSE <- clean_data %>%
+  filter(Agency == "National Commission for Space Exploration")
+NCTF <- clean_data %>%
+  filter(Agency == "National Cybersecurity Task Force")
+NISA <- clean_data %>%
+  filter(Agency == "National Institute of Scientific Advancement")
+OIRDA <- clean_data %>%
+  filter(Agency == "Office of International Relations and Diplomatic Affairs")
+OPSEM <- clean_data %>%
+  filter(Agency == "Office of Public Safety and Emergency Management")
+```
+
+## National Commission for Space Exploration
+
+```{r}
+NCSE_2017 <- 
 ```
