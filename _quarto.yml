@@ -6,9 +6,9 @@ website:
   navbar:
     left:
       - text: "Data Analytics"
-        href: ""
+        href: "Data_Challenge.html"
       - text: "Written report"
-        href: ""
+        href: "Written_Report.html"
     right: 
       - href: index.qmd
         text: Home

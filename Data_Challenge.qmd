@@ -429,14 +429,18 @@ datatable(unique_full_rows_alldata)
 
 ## Outlier Test
 
-```{r, eval = FALSE}
+### Agency Outlier
+
+Using the below code, we defined the upper_limit as 1.5 times of the IQR.
+
+```{r}
 outliers_per_desc <- clean_data %>%   
   group_by(`Procurement Description`) %>%   
   summarize(count = n(),             
             upper_limit = quantile(abs(`Awarded Amount`))[4],             
             iqr = IQR(abs(`Awarded Amount`))) %>%   
   mutate(upper_extreme_outlier = upper_limit + 1.5 * iqr)  %>%   
-  select(Procurement.Description, upper_limit, iqr, upper_extreme_outlier)
+  select(`Procurement Description`, upper_limit, iqr, upper_extreme_outlier)
 
 clean_data %>%  
   left_join(outliers_per_desc, by = 'Procurement Description') %>%    
@@ -444,6 +448,33 @@ clean_data %>%
   select(`Procurement Code`, Agency, `Awarded Amount`, `Procurement Description`, upper_extreme_outlier) %>%  
   slice_max(order_by = `Awarded Amount`, n=10) %>%  
   arrange(`Procurement Code`)
+```
+
+### Supplier
+
+```{r}
+library(ggplot2) 
+library(dplyr)  
+Supplier_count <- clean_data %>%   
+  group_by(`Procurement Description`, Supplier) %>%   
+  summarize(count = n())  
+  
+Task= unique(Supplier_count$`Procurement Description`)
+a = data_frame()
+c = list()
+for (i in Task){
+  filtered_data <- Supplier_count %>%
+    filter(`Procurement Description` == i)
+  upper_limit <- quantile(filtered_data$count, 0.95)
+  print(paste0(i, ":", upper_limit))
+  b <- filtered_data %>%
+    filter(count > upper_limit) %>%
+    mutate(`95th percentile` = upper_limit)
+  
+  a <- rbind(a, b)
+    
+}
+datatable(a)
 ```
 
 ## Round Number Test
@@ -456,11 +487,11 @@ round_numbers <- clean_data %>%
   filter_at(vars(starts_with("t_round")), any_vars(.)) %>%
   select(`Procurement Code`, `Procurement Description`, Agency, Date, `Awarded Amount`, Supplier, starts_with("t_round")) 
 
- round_numbers %>%
+round_numbers %>%
   filter(t_round_1000 == TRUE)%>%
   group_by(`Procurement Description`)%>%
   summarise(Count = n())%>% 
-   arrange(desc(Count))
+  arrange(desc(Count))
 ```
 
 -   By 1,000
@@ -477,3 +508,7 @@ round_numbers %>%
   summarise(Count = n())%>% 
    arrange(desc(Count))
 ```
+
+And that is all the test conducted for this test!
+
+You can refer to the shiny app here.

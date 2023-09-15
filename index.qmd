@@ -1,0 +1,7 @@
+---
+title: "AGO Data Challenge"
+---
+
+Welcome to our group's webpage where our analysis are well documented.
+
+Please refer to the written report for our indepth analysis of the case study and the Data Analytics section for the code used for the analysis and visualisation.
