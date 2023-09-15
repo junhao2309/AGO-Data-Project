@@ -1,0 +1,24 @@
+---
+title: "Written_Report"
+date: "15 Sep 2023"
+date-modified: "`r Sys.Date()`"
+number-sections: true
+format: html
+execute: 
+  echo: true
+  eval: true
+  warning: false
+editor: visual
+---
+
+# Introduction
+
+# Methodology/Insights
+
+## Benford's Law
+
+## Outlier Test
+
+## Rounding Test
+
+# Recommendation

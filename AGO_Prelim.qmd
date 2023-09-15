@@ -27,6 +27,10 @@ library(plotly)
 procurement_data <- read_csv("Data_file.csv")
 ```
 
+```{r}
+procurement_data[c(1,6999,7000), c(1,2,6)]
+```
+
 # Exploratory Data Analysis (EDA)
 
 ## Understanding the Dataset
@@ -186,8 +190,9 @@ final_data[mismatched_indices,]
 The code below shows that there are at least two datasets outside the range of the suppose time period.
 
 ```{r}
-which(any(final_data$Date < ymd("2017-01-01")))
-which(any(final_data$Date > ymd("2022-12-31")))
+which(any(final_data$Date < ymd("2017-01-01")),arr.ind = TRUE
+)
+which(any(final_data$Date > ymd("2022-12-31")), arr.ind = TRUE)
 ```
 
 ```{r}
@@ -197,12 +202,22 @@ which(final_data$Date == date_min)
 which(final_data$Date == date_max)
 
 final_data[c(1,7000),]
+
+
 ```
 
 We can remove the two entries from the dataset.
 
 ```{r}
 final <- final_data[-c(1,7000),]
+```
+
+```{r}
+max(final$Date)
+min(final$Date)
+which(final$Date == max(final$Date))
+final <- final[-6998,]
+max(final$Date)
 ```
 
 ```{r, eval = FALSE}
@@ -300,21 +315,61 @@ plot_data
 ```
 
 ```{r}
-library(benford.analysis)
+library(dplyr)
 
-# Extract the 'Awarded Amount' column
-award_amounts <- clean_data$`Awarded Amount`
+# Generate the summary table
+summary_table <- clean_data %>%
+  group_by(`Procurement Description`) %>%
+  summarise(num_suppliers = n_distinct(Supplier))
 
-# Perform Benford Analysis on the extracted data
-result <- benford(award_amounts, number.of.digits=1, sign="positive", discrete=FALSE, round=0)
-
-# Print the result
-print(result)
+print(summary_table)
 
 ```
 
+# Claims made with the same value
+
+Here
+
 ```{r}
-plot(result)
+# Find the index of duplicated values
+duplicated_index <- which(duplicated(clean_data$`Awarded Amount`) | duplicated(clean_data$`Awarded Amount`, fromLast = TRUE))
+list_of_duplicate_amounts <- clean_data[duplicated_index,]
+```
+
+```{r}
+duplicated_index <- which(duplicated(list_of_duplicate_amounts[, c("Awarded Amount", "Agency", "Supplier")]) | 
+                         duplicated(list_of_duplicate_amounts[, c("Awarded Amount", "Agency", "Supplier" )], fromLast = TRUE))
+
+duplicate_amount <- list_of_duplicate_amounts[duplicated_index,]
+```
+
+From the above, we see entries that are duplicated for whether the amount is similar and whether the agency or suppliers that claims were made under are the same.
+Due to the categorisation of the claims amount.
+The value of an awarded amount split into two procurement claim can evade the ITT categorisation checks.These procurement claims should be highlighted as potential fraudulant activities.
+
+# Claims made within the same day
+
+```{r}
+# Find the index of duplicated values
+duplicated_index <- which(duplicated(clean_data$Date) | duplicated(clean_data$Date, fromLast = TRUE))
+same_day_claims <- clean_data[duplicated_index,]
+same_day_claims
+```
+
+```{r}
+same_day_claims <- same_day_claims %>%
+  arrange(Date)
+
+same_day_procurement <- same_day_claims %>%
+  group_by(Date) %>%
+  filter(n() > 1) %>%
+  group_by(Agency,Supplier, `Procurement Description`, .add = TRUE) %>%
+  filter(n()> 1)
+
+repeated_procurement <- rbind(duplicate_amount,same_day_procurement) %>%
+  distinct(`S/N`, .keep_all = TRUE)
+
+DT::datatable(repeated_procurement)
 ```
 
 # Analysis of 5 agencies
@@ -345,8 +400,334 @@ OPSEM <- clean_data %>%
   filter(Agency == "Office of Public Safety and Emergency Management")
 ```
 
+## Visualisation of aggregate expenditure by task
+
+In all 5 agencies, I will be looking specifically on their spending on each unique procurement description.
+
+::: panel-tabset
 ## National Commission for Space Exploration
 
 ```{r}
-NCSE_2017 <- 
+# Split the data into a list of dataframes based on the 'description' column
+list_of_dfs <- split(NCSE, NCSE$`Procurement Description`)
+
+# Aggregate awarded amount by year for each dataframe in the list
+aggregated_data <- lapply(list_of_dfs, function(df) {
+  aggregate(`Awarded Amount` ~ Year, data = df, sum)
+})
+
+# If you want each aggregated dataframe in the list as a separate dataframe:
+list2env(aggregated_data, envir = .GlobalEnv)
+
+```
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+plots <- list() 
+for (i in 1:20){
+data <- as.data.frame(aggregated_data[[i]])
+wrapped_title <- label_wrap_gen(width = 20)(names(aggregated_data)[i])
+plot_graph <- ggplot(data, aes(x = Year, y = `Awarded Amount`)) +
+    geom_line(aes(color = "blue")) +
+    geom_point(color = "blue") +
+    labs(title = wrapped_title) +
+      theme_minimal()
+    
+plots[[i]] <- plot_graph
+}
+
+
+```
+
+```{r}
+grid.arrange(plots[[1]], plots[[2]], plots[[3]], plots[[4]], ncol = 2, nrow = 2)
+
+```
+
+```{r}
+grid.arrange(plots[[5]], plots[[6]], plots[[7]], plots[[8]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[9]], plots[[10]], plots[[11]], plots[[12]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[13]], plots[[14]], plots[[15]], plots[[16]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[17]], plots[[18]], plots[[19]], plots[[20]], ncol = 2, nrow = 2)
+```
+
+## National Cybersecurity Task Force
+
+```{r}
+# Split the data into a list of dataframes based on the 'description' column
+list_of_dfs <- split(NCTF, NCTF$`Procurement Description`)
+
+# Aggregate awarded amount by year for each dataframe in the list
+aggregated_data <- lapply(list_of_dfs, function(df) {
+  aggregate(`Awarded Amount` ~ Year, data = df, sum)
+})
+
+# If you want each aggregated dataframe in the list as a separate dataframe:
+list2env(aggregated_data, envir = .GlobalEnv)
+
+```
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+plots <- list() 
+for (i in 1:20){
+data <- as.data.frame(aggregated_data[[i]])
+wrapped_title <- label_wrap_gen(width = 20)(names(aggregated_data)[i])
+plot_graph <- ggplot(data, aes(x = Year, y = `Awarded Amount`)) +
+    geom_line(aes(color = "blue")) +
+    geom_point(color = "blue") +
+    labs(title = wrapped_title) +
+      theme_minimal()
+    
+plots[[i]] <- plot_graph
+}
+
+
+```
+
+```{r}
+grid.arrange(plots[[1]], plots[[2]], plots[[3]], plots[[4]], ncol = 2, nrow = 2)
+
+```
+
+```{r}
+grid.arrange(plots[[5]], plots[[6]], plots[[7]], plots[[8]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[9]], plots[[10]], plots[[11]], plots[[12]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[13]], plots[[14]], plots[[15]], plots[[16]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[17]], plots[[18]], plots[[19]], plots[[20]], ncol = 2, nrow = 2)
+```
+
+## National Institute of Scientific Advancement
+
+```{r}
+# Split the data into a list of dataframes based on the 'description' column
+list_of_dfs <- split(NISA, NISA$`Procurement Description`)
+
+# Aggregate awarded amount by year for each dataframe in the list
+aggregated_data <- lapply(list_of_dfs, function(df) {
+  aggregate(`Awarded Amount` ~ Year, data = df, sum)
+})
+
+# If you want each aggregated dataframe in the list as a separate dataframe:
+list2env(aggregated_data, envir = .GlobalEnv)
+
+```
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+plots <- list() 
+for (i in 1:20){
+data <- as.data.frame(aggregated_data[[i]])
+wrapped_title <- label_wrap_gen(width = 20)(names(aggregated_data)[i])
+plot_graph <- ggplot(data, aes(x = Year, y = `Awarded Amount`)) +
+    geom_line(aes(color = "blue")) +
+    geom_point(color = "blue") +
+    labs(title = wrapped_title) +
+      theme_minimal()
+    
+plots[[i]] <- plot_graph
+}
+
+
+```
+
+```{r}
+grid.arrange(plots[[1]], plots[[2]], plots[[3]], plots[[4]], ncol = 2, nrow = 2)
+
+```
+
+```{r}
+grid.arrange(plots[[5]], plots[[6]], plots[[7]], plots[[8]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[9]], plots[[10]], plots[[11]], plots[[12]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[13]], plots[[14]], plots[[15]], plots[[16]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[17]], plots[[18]], plots[[19]], plots[[20]], ncol = 2, nrow = 2)
+```
+
+## Office of International Relations and Diplomatic Affairs
+
+```{r}
+# Split the data into a list of dataframes based on the 'description' column
+list_of_dfs <- split(OIRDA, OIRDA$`Procurement Description`)
+
+# Aggregate awarded amount by year for each dataframe in the list
+aggregated_data <- lapply(list_of_dfs, function(df) {
+  aggregate(`Awarded Amount` ~ Year, data = df, sum)
+})
+
+# If you want each aggregated dataframe in the list as a separate dataframe:
+list2env(aggregated_data, envir = .GlobalEnv)
+
+```
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+plots <- list() 
+for (i in 1:20){
+data <- as.data.frame(aggregated_data[[i]])
+wrapped_title <- label_wrap_gen(width = 20)(names(aggregated_data)[i])
+plot_graph <- ggplot(data, aes(x = Year, y = `Awarded Amount`)) +
+    geom_line(aes(color = "blue")) +
+    geom_point(color = "blue") +
+    labs(title = wrapped_title) +
+      theme_minimal()
+    
+plots[[i]] <- plot_graph
+}
+
+
+```
+
+```{r}
+grid.arrange(plots[[1]], plots[[2]], plots[[3]], plots[[4]], ncol = 2, nrow = 2)
+
+```
+
+```{r}
+grid.arrange(plots[[5]], plots[[6]], plots[[7]], plots[[8]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[9]], plots[[10]], plots[[11]], plots[[12]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[13]], plots[[14]], plots[[15]], plots[[16]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[17]], plots[[18]], plots[[19]], plots[[20]], ncol = 2, nrow = 2)
+```
+
+## Office of Public Safety and Emergency Management
+
+```{r}
+# Split the data into a list of dataframes based on the 'description' column
+list_of_dfs <- split(OPSEM, OPSEM$`Procurement Description`)
+
+# Aggregate awarded amount by year for each dataframe in the list
+aggregated_data <- lapply(list_of_dfs, function(df) {
+  aggregate(`Awarded Amount` ~ Year, data = df, sum)
+})
+
+# If you want each aggregated dataframe in the list as a separate dataframe:
+list2env(aggregated_data, envir = .GlobalEnv)
+
+```
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+plots <- list() 
+for (i in 1:20){
+data <- as.data.frame(aggregated_data[[i]])
+wrapped_title <- label_wrap_gen(width = 20)(names(aggregated_data)[i])
+plot_graph <- ggplot(data, aes(x = Year, y = `Awarded Amount`)) +
+    geom_line(aes(color = "blue")) +
+    geom_point(color = "blue") +
+    labs(title = wrapped_title) +
+      theme_minimal()
+    
+plots[[i]] <- plot_graph
+}
+
+
+```
+
+```{r}
+grid.arrange(plots[[1]], plots[[2]], plots[[3]], plots[[4]], ncol = 2, nrow = 2)
+
+```
+
+```{r}
+grid.arrange(plots[[5]], plots[[6]], plots[[7]], plots[[8]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[9]], plots[[10]], plots[[11]], plots[[12]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[13]], plots[[14]], plots[[15]], plots[[16]], ncol = 2, nrow = 2)
+```
+
+```{r}
+grid.arrange(plots[[17]], plots[[18]], plots[[19]], plots[[20]], ncol = 2, nrow = 2)
+```
+:::
+
+```{r}
+
+```
+
+```{r}
+breaks <- c(0 ,10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000)
+# Define levels
+labels <- c("Level 0","Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Level 6", "Level 7", "Level 8", "Level 9")
+# Assign levels based on Amount
+NCSE_ITQ <- NCSE %>% 
+  filter(`Procurement Type` == "ITQ")
+
+NCSE_ITQ$Level <- cut(NCSE_ITQ$`Awarded Amount`, breaks = breaks, labels = labels, include.lowest = TRUE)
+```
+
+```{r}
+ggplot(NCSE_ITQ, aes(x=Level)) +
+  geom_bar(position="dodge") +
+  labs(title="Number of Claims per Level", x="Level", y="Count") +
+  theme_minimal() +
+  theme(legend.position="none")
+```
+
+```{r}
+breaks <- c(100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000, 10000000)
+labels <- c("Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Level 6", "Level 7", "Level 8", "Level 9", "Level 10")
+# Assign levels based on Amount
+NCSE_ITT <- NCSE %>% 
+  filter(`Procurement Type` == "ITT")
+
+NCSE_ITT$Level <- cut(NCSE_ITT$`Awarded Amount`, breaks = breaks, labels = labels, include.lowest = TRUE)
+```
+
+```{r}
+ggplot(NCSE_ITT, aes(x=Level)) +
+  geom_bar(position="dodge") +
+  labs(title="Number of Claims per Level", x="Level", y="Count") +
+  theme_minimal() +
+  theme(legend.position="none")
 ```

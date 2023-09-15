@@ -1,0 +1,479 @@
+---
+title: "AGO_Data_Challenge"
+date: "12 Sep 2023"
+date-modified: "`r Sys.Date()`"
+number-sections: true
+format: html
+execute: 
+  echo: true
+  eval: true
+  warning: false
+editor: visual
+---
+
+The purpose of this document is to note down our thought processes and how the team has analysed the case on each step.
+For readers, you can think of this document as a documentation of our work on the R platform.
+For the in depth analysis, please refer to our written report.
+# Setting Up
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+library(crosstalk)
+library(plotly)
+library(DT)
+library(ggthemes)
+```
+
+## Loading of Dataset
+
+```{r}
+procurement_data <- read_csv("Data_file.csv")
+```
+
+# Exploratory Data Analysis (EDA)
+
+## Understanding the Dataset
+
+-   Checking for Duplicate entries
+
+```{r}
+any(duplicated(procurement_data$`Procurement Code`))
+```
+
+Procurement Code does not have duplicated entries and has an assigned unique identifier to the procurement made.
+
+::: panel-tabset
+### Agency
+
+This showcases the number of Government agencies and Statutory Boards within this dataset.
+
+```{r}
+unique(procurement_data$Agency)
+```
+
+There are a total of 15 agencies under this dataset.
+
+### Procurement Description
+
+This showcases how procurement purposes are being categorized.
+
+```{r}
+unique(procurement_data$`Procurement Description`)
+```
+
+There are a total of 20 categories of reasons for why procurement was made.
+
+### Supplier
+
+This showcases the catalogue of suppliers agencies may refer to for procurement
+
+```{r}
+unique(procurement_data$Supplier)
+```
+
+A total of 98 suppliers were paid for their services.
+:::
+
+## Setting the correct variable types
+
+The code below shows the variable types for each column.
+
+```{r}
+glimpse(procurement_data)
+```
+
+Over here, we see that Date of Award and Awarded Amount are in character type and should be changed to date and integer respectively.
+
+```{r}
+clean_data <- procurement_data %>%
+    mutate(`Date of Award (2017-2022)` = dmy(`Date of Award (2017-2022)`)) %>%
+    mutate(`Awarded Amount` = as.numeric(gsub(",","", gsub("\\$","", `Awarded Amount`)))) %>%
+    rename(Date = `Date of Award (2017-2022)`)
+
+glimpse(clean_data)
+```
+
+For easier referencing, "Date of Award (2017-2022)" is changed to "Date".
+As seen above, the respective columns have to changed accordingly.
+
+## Data Cleaning
+
+The first task is to ensure that the data is accurate and reliable.
+
+Procurement procedures depend on the estimated value of the goods or services provided.
+
+1.  Small value purchases (SVP)
+
+    For goods or services with an estimated value of up to \$10,000.
+
+2.  Invitation to Quote (ITQ)
+
+    For goods or services with an estimated value of up to \$100,000.
+
+3.  Invitation to Tender (ITT)
+
+    For goods or services with an estimated value of above \$100,000.
+
+### Checking Awarded Amount
+
+Given the limits, we should ensure that the Procurement Type is accurate to the value attached to the procurement.
+
+The code below shows that there are procurement done at below the value of \$10,000 but are not labelled as SVP.
+
+```{r}
+any(clean_data$`Awarded Amount` < 10000 & clean_data$`Procurement Type` == "SVP")
+any(clean_data$`Awarded Amount` > 100000 & clean_data$`Procurement Type` == "ITT")
+```
+
+```{r}
+for (i in 1:7000){
+  if (clean_data$`Awarded Amount`[i] < 10000){
+    if (clean_data$`Procurement Type`[i] != "SVP"){
+      clean_data$`Procurement Type`[i] = "SVP"
+    }
+    if (clean_data$`Awarded Amount`[i] > 100000){
+      if (clean_data$`Procurement Type`[i] != "ITT"){
+        clean_data$`Procurement Type`[i] =="ITT"
+      } 
+    else {
+      if (clean_data$`Procurement Type`[i] != "ITQ"){
+        clean_data$`Procurement Type`[i] =="ITQ"
+      }
+    }    
+    }
+    
+  }
+}
+```
+
+```{r}
+any(clean_data$`Awarded Amount` < 10000 & clean_data$`Procurement Type` == "SVP")
+any(clean_data$`Awarded Amount` > 10000 & clean_data$`Awarded Amount` < 100000 & clean_data$`Procurement Type` == "ITQ")
+any(clean_data$`Awarded Amount` > 100000 & clean_data$`Procurement Type` == "ITT")
+```
+
+Categorisation have been completed.
+
+### Procurement Code and Type
+
+Through observation, we notice that the procurement code has the first three letters that indicate the procurement type.
+We have to ensure that they are correctly identified and can be flagged accordingly to the agency handling such datasets.
+
+```{r}
+mismatched_indices <- which(str_sub(clean_data$`Procurement Code`, 1, 3) != clean_data$`Procurement Type`)
+mismatched_indices
+```
+
+As we can see, there were 10 mismatched indices.
+
+```{r}
+clean_data[mismatched_indices, c(1,2,3,8)]
+```
+
+From the table above, all 10 were mislabeled as ITQ.
+We can flag this to the team handling this dataset to keep watch.
+This could be easily fixed through automated processes by automatically assigning the correct type and code based on amount declared or invoiced in.
+
+Next, amend the dataframe accordingly to reflect the intended change.
+
+```{r}
+final_data <- clean_data %>%
+  mutate(`Procurement Code` = ifelse(
+    str_sub(`Procurement Code`, 1, 3) != `Procurement Type`,
+    paste0(`Procurement Type`, str_sub(`Procurement Code`, 4)),
+    `Procurement Code`
+  ))
+final_data[mismatched_indices,]
+```
+
+### Out of range data elements
+
+The code below shows that there are at least two datasets outside the range of the suppose time period.
+
+```{r}
+which(any(final_data$Date < ymd("2017-01-01")),arr.ind = TRUE
+)
+which(any(final_data$Date > ymd("2022-12-31")), arr.ind = TRUE)
+```
+
+```{r}
+date_min <- min(final_data$Date)
+date_max <- max(final_data$Date)
+which(final_data$Date == date_min)
+which(final_data$Date == date_max)
+
+final_data[c(1,7000),]
+```
+
+We can remove the two entries from the dataset.
+
+```{r}
+final <- final_data[-c(1,7000),]
+```
+
+We did one more check using the max and min functions and found one more entry.
+We then remove the entry from the dataset.
+
+```{r}
+max(final$Date)
+min(final$Date)
+which(final$Date == max(final$Date))
+final <- final[-6998,]
+max(final$Date)
+```
+
+We will save this data set as it is.
+
+```{r, eval = FALSE}
+readr::write_csv(final, "AGO_Cleaned_Data.csv")
+```
+
+Then we can just call this cleaned data from our folder.
+
+```{r}
+clean_data <- read_csv("AGO_Cleaned_Data.csv")
+```
+
+## Visualisation
+
+After the dataset has been cleaned, we can now focus on basic visualisation.
+This is also done in our Shiny application but here are a few examples.
+
+First, we will assign a year column to the dataset.
+
+```{r}
+clean_data$Year <- as.numeric(format(clean_data$Date, "%Y"))
+```
+
+### Scatterplot for Agency Procurement by Type and Year
+
+```{r}
+filtered_data <- clean_data %>%
+  filter(Agency == "Agency for Cultural Preservation and Heritage" & 
+           `Procurement Type` == "ITQ" & 
+           Year == 2017)
+
+p <- ggplot(filtered_data, 
+            aes(x = Date, y = `Awarded Amount`, 
+                text = `Procurement Description`)) +
+        geom_jitter(width = 0.2, height = 0, alpha = 0.6) + 
+        labs(title = paste("Scatter Plot for Agency For Cultural Preservation and Heritage in 2017"), 
+             x = "Date", 
+             y = "Amount") + 
+        theme_economist()
+      
+ggplotly(p, tooltip = c("x", "y", "text"))
+```
+
+### Supplier Awarded Amount
+
+```{r}
+data_set <- clean_data %>%
+  filter(`Procurement Description` == "Energy-efficient lighting installation and maintenance.")
+    
+yearly_data <- data_set %>%
+  group_by(Year, Supplier) %>%
+  summarise(TotalAmount = sum(`Awarded Amount`, na.rm = TRUE))
+    
+table_data <- yearly_data %>%
+  pivot_wider(names_from = Year, values_from = TotalAmount, values_fill = list(TotalAmount = 0))
+    
+datatable(table_data)
+```
+
+### Agency's Procurement Amount
+
+Similar to the above but done for Agency
+
+```{r}
+data_set <- clean_data %>%
+  filter(`Procurement Description` == "Energy-efficient lighting installation and maintenance.")
+    
+yearly_data <- data_set %>%
+  group_by(Year, Agency) %>%
+  summarise(TotalAmount = sum(`Awarded Amount`, na.rm = TRUE))
+    
+table_data <- yearly_data %>%
+  pivot_wider(names_from = Year, values_from = TotalAmount, values_fill = list(TotalAmount = 0))
+    
+datatable(table_data)
+```
+
+```{r}
+# Total amount by agency
+agency_data <- clean_data %>%
+  group_by(Agency) %>%
+  summarise(TotalAmount = sum(`Awarded Amount`, na.rm = TRUE)) %>%
+  arrange(TotalAmount)
+# Total no. of procurement by agency
+proc_per_agency <- clean_data %>%
+  group_by(Agency)%>%
+  summarize(Count = n())%>%
+  arrange(desc(Count))
+joined_data <- agency_data %>%
+  inner_join(proc_per_agency, by = "Agency") %>%
+  mutate(AverageAmount = round(TotalAmount/Count,)) %>%
+  arrange(AverageAmount)
+
+ggplot(joined_data, aes(y=reorder(Agency,TotalAmount), x= TotalAmount,fill = -AverageAmount)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=TotalAmount),hjust = 1.1, size =3, col = "white") +
+  labs(x = "Total Amount", y = "Agency") +
+  theme(axis.text.x = element_text(size = 5)) 
+```
+
+# Data Analytics
+
+## Benford's Law
+
+As there were many agencies and various description types, a Shiny application was created to consolidate our analysis findings and visualisation.
+
+The key package and code used for this analysis is:
+
+```{r, eval = FALSE}
+library(benford.analysis)
+benford(data = XXX, number.of.digits = 1))
+```
+
+We referenced to [Nigrini, & Mittermaier, L. (1997). The use of Benford's Law as an aid in analytical procedures. Auditing : a Journal of Practice and Theory, 16(2), 52--67.](https://www.proquest.com/docview/216734639) 
+in understanding the use of this technique in identifying potential suspicious procurements.
+
+An example of how the analysis is run is as follows:
+
+```{r}
+library(benford.analysis)
+# Filter to respective agency
+filtered_data <- clean_data %>%
+      filter(Agency == "Agency for Cultural Preservation and Heritage")
+             
+    
+# Do Benford's analysis on the filtered data
+benford_result <- benford(filtered_data$`Awarded Amount`, number.of.digits = 1)
+plot(benford_result)
+```
+
+The team noted that Benford's law should follow a decreasing function as indicated in the red line and took the leading number with the highest deviation away for further investigations.
+This is done on several other agencies as well and is as indicated in the written report section.
+
+### Duplication Test
+
+The intuition to check for duplicates came from the Benford's Law analysis on the Agency for Culture and Heritage as we zoomed in on the leading number, 9.
+
+The test done here is on the whole dataset.
+Using duplicated(), we manage to find several transactions which were in the same amount.
+
+```{r}
+# Find the index of duplicated values
+duplicated_index <- which(duplicated(clean_data$`Awarded Amount`) | duplicated(clean_data$`Awarded Amount`, fromLast = TRUE))
+list_of_duplicate_amounts <- clean_data[duplicated_index,]
+```
+
+```{r}
+duplicated_index <- which(duplicated(list_of_duplicate_amounts[, c("Awarded Amount", "Agency", "Supplier")]) | 
+                         duplicated(list_of_duplicate_amounts[, c("Awarded Amount", "Agency", "Supplier" )], fromLast = TRUE))
+
+duplicate_amount <- list_of_duplicate_amounts[duplicated_index,]
+```
+
+From the above, we see entries that are duplicated for whether the amount is similar and whether the agency or suppliers that claims were made under are the same.
+Due to the categorisation of the claims amount, the value of an awarded amount can be split into two procurement claim to evade the ITT categorisation checks.
+These procurement claims should be highlighted as potential fraudulant activities.
+
+### Claims made within a month of a similar procurement
+
+Seeing how claims were made within the same day, the team then identified procurements made 30days apart within the same agency for the same descriptionl.
+
+```{r}
+library(dplyr)
+
+sorted_data <- clean_data %>%
+  arrange(`Procurement Description`, Agency, Supplier, Date)
+
+unique_full_rows_alldata <- clean_data[0,]
+
+# Initialize a vector to track added codes
+added_codes <- integer(0)
+
+# Iterate over the rows of the sorted dataframe
+for(i in 1:(nrow(sorted_data) - 1)) {
+  if(!sorted_data$`S/N`[i] %in% added_codes) {
+    for(j in (i+1):nrow(sorted_data)) {
+      
+      # Check if they are the same Task and Supplier and within 30 days
+      if(sorted_data$`Procurement Description`[i] == sorted_data$`Procurement Description`[j] && 
+         sorted_data$Supplier[i] == sorted_data$Supplier[j] && 
+         sorted_data$Agency[i] == sorted_data$Agency[j] &&
+         abs(as.numeric(difftime(sorted_data$Date[j], sorted_data$Date[i], units = "days"))) <= 30) {
+        
+        # Add these rows to unique_full_rows and record the codes as added
+        unique_full_rows_alldata <- rbind(unique_full_rows_alldata, sorted_data[i,], sorted_data[j,])
+        added_codes <- c(added_codes, sorted_data$`S/N`[i], sorted_data$`S/N`[j])
+        
+        break # We found a pair for the ith entry, so no need to continue the inner loop
+      }
+    }
+  }
+}
+
+# If needed, sort the result again by Task, Supplier, and Date
+unique_full_rows_alldata <- unique_full_rows_alldata %>%
+  arrange(`Procurement Description`, Supplier, Date)
+
+datatable(unique_full_rows_alldata)
+```
+
+## Outlier Test
+
+```{r, eval = FALSE}
+outliers_per_desc <- clean_data %>%   
+  group_by(`Procurement Description`) %>%   
+  summarize(count = n(),             
+            upper_limit = quantile(abs(`Awarded Amount`))[4],             
+            iqr = IQR(abs(`Awarded Amount`))) %>%   
+  mutate(upper_extreme_outlier = upper_limit + 1.5 * iqr)  %>%   
+  select(Procurement.Description, upper_limit, iqr, upper_extreme_outlier)
+
+clean_data %>%  
+  left_join(outliers_per_desc, by = 'Procurement Description') %>%    
+  filter(`Awarded Amount` >= upper_extreme_outlier) %>%   
+  select(`Procurement Code`, Agency, `Awarded Amount`, `Procurement Description`, upper_extreme_outlier) %>%  
+  slice_max(order_by = `Awarded Amount`, n=10) %>%  
+  arrange(`Procurement Code`)
+```
+
+## Round Number Test
+
+-   By 100
+
+```{r}
+round_numbers <- clean_data %>%
+  mutate(t_round_1000 = `Awarded Amount` %% 100 == 0) %>%
+  filter_at(vars(starts_with("t_round")), any_vars(.)) %>%
+  select(`Procurement Code`, `Procurement Description`, Agency, Date, `Awarded Amount`, Supplier, starts_with("t_round")) 
+
+ round_numbers %>%
+  filter(t_round_1000 == TRUE)%>%
+  group_by(`Procurement Description`)%>%
+  summarise(Count = n())%>% 
+   arrange(desc(Count))
+```
+
+-   By 1,000
+
+```{r}
+round_numbers <- clean_data %>%
+  mutate(t_round_1000 = `Awarded Amount` %% 1000 == 0) %>%
+  filter_at(vars(starts_with("t_round")), any_vars(.)) %>%
+  select(`Procurement Code`, `Procurement Description`, Agency, Date, `Awarded Amount`, Supplier, starts_with("t_round")) 
+
+round_numbers %>%
+  filter(t_round_1000 == TRUE)%>%
+  group_by(`Procurement Description`)%>%
+  summarise(Count = n())%>% 
+   arrange(desc(Count))
+```
